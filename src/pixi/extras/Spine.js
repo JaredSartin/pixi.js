@@ -1,10 +1,10 @@
 /******************************************************************************
  * Spine Runtimes Software License
  * Version 2.1
- *
+ * 
  * Copyright (c) 2013, Esoteric Software
  * All rights reserved.
- *
+ * 
  * You are granted a perpetual, non-exclusive, non-sublicensable and
  * non-transferable license to install, execute and perform the Spine Runtimes
  * Software (the "Software") solely for internal use. Without the written
@@ -15,7 +15,7 @@
  * trademark, patent or other intellectual property or proprietary rights
  * notices on or in the Software, including any copy thereof. Redistributions
  * in binary or source form must include this license and terms.
- *
+ * 
  * THIS SOFTWARE IS PROVIDED BY ESOTERIC SOFTWARE "AS IS" AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO
@@ -226,7 +226,9 @@ spine.IkConstraint.prototype = {
 spine.IkConstraint.apply1 = function (bone, targetX, targetY, alpha) {
 	var parentRotation = (!bone.data.inheritRotation || !bone.parent) ? 0 : bone.parent.worldRotation;
 	var rotation = bone.rotation;
-	var rotationIK = Math.atan2(targetY - bone.worldY, targetX - bone.worldX) * spine.radDeg - parentRotation;
+	var rotationIK = Math.atan2(targetY - bone.worldY, targetX - bone.worldX) * spine.radDeg;
+	if (bone.worldFlipX != (bone.worldFlipY != spine.Bone.yDown)) rotationIK = -rotationIK;
+	rotationIK -= parentRotation;
 	bone.rotationIK = rotation + (rotationIK - rotation) * alpha;
 };
 /** Adjusts the parent and child bone rotations so the tip of the child is as close to the target position as possible. The
@@ -402,7 +404,7 @@ spine.Curves.prototype = {
 		var i = frameIndex * 19/*BEZIER_SIZE*/;
 		var curves = this.curves;
 		curves[i++] = 2/*BEZIER*/;
-
+		
 		var x = dfx, y = dfy;
 		for (var n = i + 19/*BEZIER_SIZE*/ - 1; i < n; i += 2) {
 			curves[i] = x;
@@ -1008,7 +1010,7 @@ spine.Skeleton = function (skeletonData) {
 		this.slots.push(slot);
 		this.drawOrder.push(slot);
 	}
-
+	
 	this.ikConstraints = [];
 	for (var i = 0, n = skeletonData.ikConstraints.length; i < n; i++)
 		this.ikConstraints.push(new spine.IkConstraint(skeletonData.ikConstraints[i], this));
@@ -1141,8 +1143,8 @@ spine.Skeleton.prototype = {
 		if (!skin) throw "Skin not found: " + skinName;
 		this.setSkin(skin);
 	},
-	/** Sets the skin used to look up attachments before looking in the {@link SkeletonData#getDefaultSkin() default skin}.
-	 * Attachments from the new skin are attached if the corresponding attachment from the old skin was attached. If there was
+	/** Sets the skin used to look up attachments before looking in the {@link SkeletonData#getDefaultSkin() default skin}. 
+	 * Attachments from the new skin are attached if the corresponding attachment from the old skin was attached. If there was 
 	 * no old skin, each slot's setup mode attachment is attached from the new skin.
 	 * @param newSkin May be null. */
 	setSkin: function (newSkin) {
@@ -1589,7 +1591,7 @@ spine.AnimationState.prototype = {
 	clearTracks: function () {
 		for (var i = 0, n = this.tracks.length; i < n; i++)
 			this.clearTrack(i);
-		this.tracks.length = 0;
+		this.tracks.length = 0; 
 	},
 	clearTrack: function (trackIndex) {
 		if (trackIndex >= this.tracks.length) return;
@@ -1815,7 +1817,7 @@ spine.SkeletonJson.prototype = {
 
 		var type = spine.AttachmentType[map["type"] || "region"];
 		var path = map["path"] || name;
-
+		
 		var scale = this.scale;
 		if (type == spine.AttachmentType.region) {
 			var region = this.attachmentLoader.newRegionAttachment(skin, name, path);
@@ -1842,7 +1844,7 @@ spine.SkeletonJson.prototype = {
 		} else if (type == spine.AttachmentType.mesh) {
 			var mesh = this.attachmentLoader.newMeshAttachment(skin, name, path);
 			if (!mesh) return null;
-			mesh.path = path;
+			mesh.path = path; 
 			mesh.vertices = this.getFloatArray(map, "vertices", scale);
 			mesh.triangles = this.getIntArray(map, "triangles");
 			mesh.regionUVs = this.getFloatArray(map, "uvs", 1);
@@ -1886,7 +1888,7 @@ spine.SkeletonJson.prototype = {
 			mesh.triangles = this.getIntArray(map, "triangles");
 			mesh.regionUVs = uvs;
 			mesh.updateUVs();
-
+			
 			color = map["color"];
 			if (color) {
 				mesh.r = this.toColor(color, 0);
@@ -1894,7 +1896,7 @@ spine.SkeletonJson.prototype = {
 				mesh.b = this.toColor(color, 2);
 				mesh.a = this.toColor(color, 3);
 			}
-
+			
 			mesh.hullLength = (map["hull"] || 0) * 2;
 			if (map["edges"]) mesh.edges = this.getIntArray(map, "edges");
 			mesh.width = (map["width"] || 0) * scale;
@@ -2041,7 +2043,7 @@ spine.SkeletonJson.prototype = {
 				frameIndex++;
 			}
 			timelines.push(timeline);
-			duration = Math.max(duration, timeline.frames[timeline.frameCount * 3 - 3]);
+			duration = Math.max(duration, timeline.frames[timeline.getFrameCount() * 3 - 3]);
 		}
 
 		var ffd = map["ffd"];
@@ -2058,7 +2060,7 @@ spine.SkeletonJson.prototype = {
 					if (!attachment) throw "FFD attachment not found: " + meshName;
 					timeline.slotIndex = slotIndex;
 					timeline.attachment = attachment;
-
+					
 					var isMesh = attachment.type == spine.AttachmentType.mesh;
 					var vertexCount;
 					if (isMesh)
@@ -2096,13 +2098,13 @@ spine.SkeletonJson.prototype = {
 									vertices[ii] += meshVertices[ii];
 							}
 						}
-
+						
 						timeline.setFrame(frameIndex, valueMap["time"], vertices);
 						this.readCurve(timeline, frameIndex, valueMap);
 						frameIndex++;
 					}
 					timelines[timelines.length] = timeline;
-					duration = Math.max(duration, timeline.frames[timeline.frameCount - 1]);
+					duration = Math.max(duration, timeline.frames[timeline.getFrameCount() - 1]);
 				}
 			}
 		}
@@ -2170,7 +2172,7 @@ spine.SkeletonJson.prototype = {
 	},
 	readCurve: function (timeline, frameIndex, valueMap) {
 		var curve = valueMap["curve"];
-		if (!curve)
+		if (!curve) 
 			timeline.curves.setLinear(frameIndex);
 		else if (curve == "stepped")
 			timeline.curves.setStepped(frameIndex);
